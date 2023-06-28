@@ -10,11 +10,11 @@ Open our automatically generated scanner issue:
 ![scanner_issue](img/scanner_issue.png)
 
 Choose "Edit" on the right site under "Labels"
-(by default there is a label called "automated-credential-scan")
+(by default there is a label called "automated-linting-scan")
 
 ![labels](img/labels.png)
 
-Add a new Label called "automated-credential-scan-disabled" to the already existing issue:
+Add a new Label called "automated-linting-scan-disabled" to the already existing issue:
 
 ![disabled_label](img/disabled_scanner_label.png)
 

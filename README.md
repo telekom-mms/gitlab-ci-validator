@@ -1,14 +1,14 @@
-# Automated credential scanner
+# Automated linting scanner
 
-Background: We wanted to scan all our GitLab projects for leaked credentials. This way we want to improve our security standards company wide. This ReadMe explains how we use KICS to scan all repositories and how you can opt-out.
+Background: We wanted to scan all our GitLab projects for a valid gitlab-ci.yml.
 
-This repo runs a CI Job which scans all accessible repositories for credentials and creates a ticket with the scan result if there are any findings.
+This repo runs a CI Job which scans all accessible repositories if their gitlab-ci.yml is valid and creates a ticket with the scan result if it is invalid..
 
 If you fixed the findings you can close the created issue and this job will automatically reopen and update the existing ticket if there are new issues found.
 
 ## Documentation
 
-Please have a look at our official documentation: [https://github.com/T-Systems-MMS/gitlab-credential-scanner](https://github.com/T-Systems-MMS/gitlab-credential-scanner)
+Please have a look at our official documentation: [https://github.com/telekom-mms/gitlab-linting-scanner](https://github.com/telekom-mms/gitlab-linting-scanner)
 
 ## Contributing
 
@@ -16,7 +16,7 @@ If you want to contribute you can create a merge request so other colleagues wil
 
 ## License
 
-Copyright 2022-2023 T-Systems Multimedia Solutions GmbH
+Copyright 2023 Telekom MMS GmbH
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

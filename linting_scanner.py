@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
 """
-Run kics scans on multiple gitlab repositories in a row.
-
-For a detailed overview over the used GitLab API see:
-    https://python-gitlab.readthedocs.io/en/stable/index.html
+Run gitlab-ci.yml linting on multiple gitlab repositories in a row.
 """
 
 # import our used python libraries
 import logging
-import subprocess
-import tempfile
 from argparse import ArgumentParser
 from gitlab import Gitlab, GitlabListError, GitlabAuthenticationError
 from git import Repo, GitCommandError
@@ -30,12 +25,12 @@ def get_projects():
             projects = gl.projects.list(
                 get_all=True, order_by="id", min_access_level=20, archived=False, with_issues_enabled=True
             )
+        logging.debug(projects)
+        return projects
     except GitlabListError:
         logging.error("can't fetch list from %s", gitlab_url)
     except GitlabAuthenticationError:
         logging.error("cannot authenticate against %s", gitlab_url)
-    logging.debug(projects)
-    return projects
 
 
 def create_description(scanner_output):
@@ -43,14 +38,14 @@ def create_description(scanner_output):
     env = Environment(loader=FileSystemLoader("./templates/"))
 
     template = env.get_template(f"{args.template_name}")
-    description = template.render(scanner_output=scanner_output)
+    description = template.render(scanner_output=scanner_output.errors)
 
     return description
 
 
 def close_issue(project):
-    """Close the issue if scan is successful."""
-    issue_list = project.issues.list(labels=["automated-credential-scan"])
+    """Close the issue if linting is successful."""
+    issue_list = project.issues.list(labels=["automated-linting-scan"])
     issues_fixed = 0
 
     if len(issue_list) > 0:
@@ -59,8 +54,7 @@ def close_issue(project):
             issues_fixed = 1
             issue.state_event = "close"
             comment_text = (
-                "Closed by the credential scanner because it did not "
-                "find any leaked credentials."
+                "Closed by the linting scanner because linting is fine."
             )
             issue.notes.create({"body": comment_text})
             issue.save()
@@ -70,7 +64,7 @@ def close_issue(project):
 
 def create_issue(project, scanner_output):
     """Create an issue if we found something with our scan."""
-    issue_list = project.issues.list(labels=["automated-credential-scan"])
+    issue_list = project.issues.list(labels=["automated-linting-scan"])
 
     if len(issue_list) > 0:
         logging.debug("there is already an issue")
@@ -78,8 +72,7 @@ def create_issue(project, scanner_output):
         if issue.state == "closed":
             issue.state_event = "reopen"
             comment_text = (
-                "Reopened by the credential scanner because it did find "
-                "leaked credentials."
+                "Reopened by the linting scanner because linting found an error."
             )
             issue.notes.create({"body": comment_text})
         issue.description = create_description(scanner_output=scanner_output)
@@ -87,9 +80,9 @@ def create_issue(project, scanner_output):
     else:
         project.issues.create(
             {
-                "title": "Automated credential scan",
+                "title": "Automated linting scan",
                 "description": create_description(scanner_output=scanner_output),
-                "labels": ["automated-credential-scan"],
+                "labels": ["automated-linting-scan"],
             }
         )
 
@@ -100,62 +93,30 @@ def create_issue(project, scanner_output):
 def run_scan(
     project, project_path, projects_with_issues_found, projects_with_issues_fixed
 ):
-    """Scan a project with kics."""
+    """Scan a project."""
 
-    logging.info("%s: starting kics scan", project_path)
-    scanner = subprocess.run(
-        [
-            "kics",
-            "scan",
-            "-i",
-            "a88baa34-e2ad-44ea-ad6f-8cac87bc7c71",  # kics id for leaked credential scan only
-            "--no-color",
-            "-p",
-            ".",
-        ],
-        cwd=tmpdir,
-        capture_output=True,
-        check=False,
-    )
-
-    logging.debug(scanner.stdout)
-    logging.debug(scanner.stderr)
-
-# see https://docs.kics.io/latest/results/#results_status_code
-# for list of exit codes
-
-    if scanner.returncode in (2, 20, 30, 40, 50):
+    logging.info("%s: starting linting scan", project_path)
+    lint_result = project.ci_lint.get()
+    logging.debug(lint_result)
+    if "Please provide content of .gitlab-ci.yml" not in lint_result.errors and not lint_result.valid:
         logging.info(
-            "%s: returncode is %s - create a ticket", project_path, scanner.returncode
+            "%s: linting is broken - create a ticket", project_path
         )
         projects_with_issues_found += create_issue(
-            project=project, scanner_output=scanner.stdout.decode("utf-8")
+            project=project, scanner_output=lint_result
         )
-    elif scanner.returncode == 0:
+    elif lint_result.valid:
         projects_with_issues_fixed += close_issue(project=project)
-        logging.info("%s: kics scan successful - did not find any leaked credentials.", project_path)
+        logging.info("%s: linting okay.", project_path)
     else:
-        logging.info("%s: kics scan failed - skip issue creation", project_path)
+        logging.info("%s: linting failed - skip issue creation", project_path)
 
     return projects_with_issues_fixed, projects_with_issues_found
-
-def clone_repo(project_url):
-    """Clone the specified repository"""
-    success = True
-    logging.debug(project_url)
-    try:
-        Repo.clone_from(url=project_url, to_path=tmpdir, multi_options=["--depth 1"])
-    except GitCommandError:
-        logging.warning("Unable to Clone Repository from URL %s", project_url)
-        success = False
-
-    return success
-
 
 if __name__ == "__main__":
     # initialize logging and set it to INFO
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s - %(levelname)s - %(message)s",
         datefmt="%d/%m/%y %H:%M:%S",
     )
@@ -204,20 +165,18 @@ if __name__ == "__main__":
         p_url = f"{gitlab_url_with_login}/{p_path}.git"
 
         # skip project if there is an issue to disable scanning
-        if len(p.issues.list(labels=["automated-credential-scan-disabled"])) > 0:
+        if len(p.issues.list(labels=["automated-linting-scan-disabled"])) > 0:
             logging.info(
-                '%s has label "automated-credential-scan-disabled" - skipping', p_path
+                '%s has label "automated-linting-scan-disabled" - skipping', p_path
             )
             continue
 
-        with tempfile.TemporaryDirectory(prefix="kics-scan") as tmpdir:
-            if clone_repo(project_url=p_url):
-                P_WITH_ISSUES_FIXED, P_WITH_ISSUES_FOUND = run_scan(
-                    project=p,
-                    project_path=p_path,
-                    projects_with_issues_fixed=P_WITH_ISSUES_FIXED,
-                    projects_with_issues_found=P_WITH_ISSUES_FOUND,
-                )
+        run_scan(
+            project=p,
+            project_path=p_path,
+            projects_with_issues_fixed=P_WITH_ISSUES_FIXED,
+            projects_with_issues_found=P_WITH_ISSUES_FOUND,
+        )
 
     logging.info("issues found: %s", P_WITH_ISSUES_FOUND)
     logging.info("issues fixed: %s", P_WITH_ISSUES_FIXED)

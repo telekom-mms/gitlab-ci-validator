@@ -1,6 +1,6 @@
 ---
 stages:
-  - kics-scan
+  - linting-scan
 
 .docker-login: &docker-login
   before_script:
@@ -8,7 +8,7 @@ stages:
 
 test:
   <<: *docker-login
-  stage: kics-scan
+  stage: linting-scan
   script:
     - docker run $CI_REGISTRY_IMAGE:latest --scan-repo ${TEST_REPOSITORY} --gitlab-hostname ${GITLAB_HOSTNAME} --gitlab-access-token ${GITLAB_ACCESS_TOKEN}
   needs:
@@ -18,7 +18,7 @@ test:
 
 scan:
   <<: *docker-login
-  stage: kics-scan
+  stage: linting-scan
   script:
     - docker run $CI_REGISTRY_IMAGE:latest --gitlab-hostname ${GITLAB_HOSTNAME} --gitlab-access-token ${GITLAB_ACCESS_TOKEN}
   needs:
@@ -28,7 +28,7 @@ scan:
 
 build:
   <<: *docker-login
-  stage: kics-scan
+  stage: linting-scan
   script:
     - docker build -t $CI_REGISTRY_IMAGE:latest .
     - docker push $CI_REGISTRY_IMAGE:latest

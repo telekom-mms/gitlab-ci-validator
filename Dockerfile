@@ -1,5 +1,4 @@
-# use the official kics image as basis image
-FROM checkmarx/kics:v1.7.1-debian
+FROM python:3.11.4-bookworm
 
 WORKDIR /
 
@@ -9,9 +8,9 @@ ENV GITLAB_ACCESS_TOKEN=GITLAB_ACCESS_TOKEN
 RUN set -eux; \
   apt-get update && \
   apt-get install -y --no-install-recommends \
-  python3=3.7.3-1 \
-  python3-pip=18.1-5 \
-  python3-setuptools=40.8.0-1 && \
+  python3 \
+  python3-pip \
+  python3-setuptools && \
   apt-get clean all && \
   rm -rf /var/lib/apt/lists/*
 
@@ -20,6 +19,6 @@ COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 # copy and execute repo_scanner.py
-COPY repo_scanner.py .
+COPY linting_scanner.py .
 COPY templates ./templates/.
-ENTRYPOINT ["python3", "repo_scanner.py"]
+ENTRYPOINT ["python3", "linting_scanner.py"]
