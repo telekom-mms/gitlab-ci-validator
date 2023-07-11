@@ -6,7 +6,7 @@ Run gitlab-ci.yml linting on multiple gitlab repositories in a row.
 # import our used python libraries
 import logging
 from argparse import ArgumentParser
-from gitlab import Gitlab, GitlabListError, GitlabAuthenticationError
+from gitlab import Gitlab, GitlabListError, GitlabAuthenticationError, GitlabHttpError, GitlabGetError
 from git import Repo, GitCommandError
 from jinja2 import Environment, FileSystemLoader
 
@@ -96,7 +96,12 @@ def run_scan(
     """Scan a project."""
 
     logging.info("%s: starting linting scan", project_path)
-    lint_result = project.ci_lint.get()
+    try:
+        lint_result = project.ci_lint.get()
+    except (GitlabHttpError, GitlabGetError) as e:
+        logging.info("%s: linting failed - %s - skip issue creation", project_path, e)
+        lint_result = ""
+        return
     logging.debug(lint_result)
     if "Please provide content of .gitlab-ci.yml" not in lint_result.errors and not lint_result.valid:
         logging.info(
