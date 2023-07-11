@@ -25,7 +25,6 @@ def get_projects():
             projects = gl.projects.list(
                 get_all=True, order_by="id", min_access_level=20, archived=False, with_issues_enabled=True
             )
-        logging.debug(projects)
         return projects
     except GitlabListError:
         logging.error("can't fetch list from %s", gitlab_url)
