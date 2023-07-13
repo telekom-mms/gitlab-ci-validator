@@ -118,13 +118,6 @@ def run_scan(
     return projects_with_issues_fixed, projects_with_issues_found
 
 if __name__ == "__main__":
-    # initialize logging and set it to INFO
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        datefmt="%d/%m/%y %H:%M:%S",
-    )
-
     parser = ArgumentParser()
     parser.add_argument(
         "--scan-repo",
@@ -152,7 +145,24 @@ if __name__ == "__main__":
         default="default_issue_description.j2",
         dest="template_name",
     )
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="WARNING",
+        help="set the logging level (default: WARNING)",
+        dest="log_level",
+    )
     args = parser.parse_args()
+
+    # initialize logging and set it to WARNING by default
+    logging.basicConfig(
+        level=logging.WARNING,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%d/%m/%y %H:%M:%S",
+    )
+
+    # set the logging level based on the command-line argument
+    logging.getLogger().setLevel(args.log_level)
 
     gitlab_url = f"https://{args.gitlab_hostname}"
     gitlab_url_with_login = (
