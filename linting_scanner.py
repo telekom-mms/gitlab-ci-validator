@@ -5,7 +5,7 @@ Run gitlab-ci.yml linting on multiple gitlab repositories in a row.
 
 # import our used python libraries
 import logging
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from gitlab import Gitlab, GitlabListError, GitlabAuthenticationError, GitlabHttpError, GitlabGetError
 from git import Repo, GitCommandError
 from jinja2 import Environment, FileSystemLoader
@@ -118,14 +118,7 @@ def run_scan(
     return projects_with_issues_fixed, projects_with_issues_found
 
 if __name__ == "__main__":
-    # initialize logging and set it to INFO
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        datefmt="%d/%m/%y %H:%M:%S",
-    )
-
-    parser = ArgumentParser()
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "--scan-repo",
         help="scan explicit repo with this name",
@@ -152,7 +145,24 @@ if __name__ == "__main__":
         default="default_issue_description.j2",
         dest="template_name",
     )
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="WARNING",
+        help="set the logging level",
+        dest="log_level",
+    )
     args = parser.parse_args()
+
+    # initialize logging and set it to WARNING by default
+    logging.basicConfig(
+        level=logging.WARNING,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%d/%m/%y %H:%M:%S",
+    )
+
+    # set the logging level based on the command-line argument
+    logging.getLogger().setLevel(args.log_level)
 
     gitlab_url = f"https://{args.gitlab_hostname}"
     gitlab_url_with_login = (
