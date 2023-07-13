@@ -5,7 +5,7 @@ Run gitlab-ci.yml linting on multiple gitlab repositories in a row.
 
 # import our used python libraries
 import logging
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from gitlab import Gitlab, GitlabListError, GitlabAuthenticationError, GitlabHttpError, GitlabGetError
 from git import Repo, GitCommandError
 from jinja2 import Environment, FileSystemLoader
@@ -118,7 +118,7 @@ def run_scan(
     return projects_with_issues_fixed, projects_with_issues_found
 
 if __name__ == "__main__":
-    parser = ArgumentParser()
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "--scan-repo",
         help="scan explicit repo with this name",
@@ -149,7 +149,7 @@ if __name__ == "__main__":
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         default="WARNING",
-        help="set the logging level (default: WARNING)",
+        help="set the logging level",
         dest="log_level",
     )
     args = parser.parse_args()
