@@ -5,6 +5,7 @@ WORKDIR /
 ENV GITLAB_ACCESS_TOKEN=GITLAB_ACCESS_TOKEN
 
 # install necessary packages
+# hadolint ignore=DL3008
 RUN set -eux; \
   apt-get update && \
   apt-get install -y --no-install-recommends \
